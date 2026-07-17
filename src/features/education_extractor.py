@@ -3,10 +3,19 @@
 import re
 import spacy
 
-nlp = spacy.load("en_core_web_sm")
+# -----------------------------
+# Load spaCy model safely
+# -----------------------------
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    from spacy.cli import download
+
+    download("en_core_web_sm")
+    nlp = spacy.load("en_core_web_sm")
 
 
-def is_degree(line: str) -> bool:
+def is_degree(line: str):
     """
     Returns True only if the line actually looks like a degree.
     """
@@ -106,7 +115,6 @@ def extract_education(text: str):
     )
 
     in_education = False
-
     seen_degrees = set()
 
     for i, line in enumerate(lines):
@@ -128,7 +136,7 @@ def extract_education(text: str):
 
         degree = line.strip()
 
-        # Skip if the line is actually a college name
+        # Skip if line is actually a college name
         if any(word in degree.lower() for word in institution_keywords):
             continue
 
@@ -142,10 +150,9 @@ def extract_education(text: str):
         year = ""
         cgpa = None
 
-        # Search only nearby lines
         block = lines[i : min(i + 5, len(lines))]
 
-        # ---------------- Institution ----------------
+        # -------- Institution --------
 
         for current in block:
 
@@ -167,37 +174,31 @@ def extract_education(text: str):
                 doc = nlp(current)
 
                 for ent in doc.ents:
-
                     if ent.label_ == "ORG":
-
                         institution = ent.text
                         break
 
                 if institution:
                     break
 
-        # ---------------- Year ----------------
+        # -------- Year --------
 
         for current in block:
 
             match = year_pattern.search(current)
 
             if match:
-
                 year = " ".join(match.group(0).split())
-
                 break
 
-        # ---------------- CGPA ----------------
+        # -------- CGPA --------
 
         for current in block:
 
             match = cgpa_pattern.search(current)
 
             if match:
-
                 cgpa = float(match.group(1))
-
                 break
 
         education.append(
